@@ -1,0 +1,14 @@
+language: rust
+rust:
+- nightly
+- beta
+- stable
+addons:
+  apt:
+    packages:
+    - libgtk-3-dev
+env:
+  - GTK=3.4
+  - GTK=3.18
+script:
+  - ./build.sh
