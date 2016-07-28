@@ -116,7 +116,7 @@ fn main() {
     let calendar = gtk::Calendar::new();
     let info_bar = gtk::InfoBar::new();
     let tmp_button = with_gtk_3_10!(
-        gtk::Button::new_from_icon_name("edit-clear", gtk::IconSize::Button as i32)
+        gtk::Button::new_from_icon_name("edit-clear", gtk::IconSize::Button.into())
     );
 
     println!("test");
@@ -125,9 +125,10 @@ fn main() {
         info_bar.set_show_close_button(true);
     }}
 
-    /*info_bar.connect(signals::Response::new(|response_id| {
-        info_bar.hide()
-    }));*/ //TODO: Why does this not work?
+    info_bar.connect_response(move |foo, _| {
+        println!("{:?}", foo);
+        foo.hide()
+    });
 
     progress_bar.set_fraction(0.7);
     spinner.start();
@@ -169,8 +170,8 @@ fn main() {
     button_recent.connect_clicked(clone!(window => move |_| {
         let dialog = gtk::RecentChooserDialog::new(Some("Recent chooser test"), Some(&window));
         dialog.add_buttons(&[
-            ("Ok", gtk::ResponseType::Ok as i32),
-            ("Cancel", gtk::ResponseType::Cancel as i32)
+            ("Ok", gtk::ResponseType::Ok.into()),
+            ("Cancel", gtk::ResponseType::Cancel.into())
         ]);
 
         dialog.run();
@@ -182,8 +183,8 @@ fn main() {
         let dialog = gtk::FileChooserDialog::new(Some("Choose a file"), Some(&window),
             gtk::FileChooserAction::Open);
         dialog.add_buttons(&[
-            ("Open", gtk::ResponseType::Ok as i32),
-            ("Cancel", gtk::ResponseType::Cancel as i32)
+            ("Open", gtk::ResponseType::Ok.into()),
+            ("Cancel", gtk::ResponseType::Cancel.into())
         ]);
 
         dialog.set_select_multiple(true);
