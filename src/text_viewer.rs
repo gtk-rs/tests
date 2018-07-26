@@ -27,7 +27,7 @@ fn main() {
                                                    gtk::IconSize::SmallToolbar.into());
     let text_view = gtk::TextView::new();
 
-    let open_button = gtk::ToolButton::new::<gtk::Image>(Some(&open_icon), Some("Open"));
+    let open_button = gtk::ToolButton::new(Some(&open_icon), Some("Open"));
     open_button.set_is_important(true);
 
     toolbar.add(&open_button);
