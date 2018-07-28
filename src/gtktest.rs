@@ -2,9 +2,9 @@
 
 extern crate gtk;
 extern crate gdk;
+extern crate glib;
 
 use gtk::prelude::*;
-use gdk::enums::modifier_type;
 
 /// Expands to its argument if GTK+ 3.10 support is configured and to `()` otherwise
 #[cfg(not(feature = "gtk_3_10"))]
@@ -26,24 +26,6 @@ macro_rules! with_gtk_3_10 {
     ($bl:block) => {
         $bl
     }
-}
-
-// make moving clones into closures more convenient
-macro_rules! clone {
-    (@param _) => ( _ );
-    (@param $x:ident) => ( $x );
-    ($($n:ident),+ => move || $body:expr) => (
-        {
-            $( let $n = $n.clone(); )+
-            move || $body
-        }
-    );
-    ($($n:ident),+ => move |$($p:tt),+| $body:expr) => (
-        {
-            $( let $n = $n.clone(); )+
-            move |$(clone!(@param $p),)+| $body
-        }
-    );
 }
 
 fn about_clicked(button: &gtk::Button) {
@@ -146,8 +128,14 @@ fn main() {
     window.add(&frame);
 
     let entry_clone = entry.clone();
-    button.connect_clicked(clone!(window => move |_| {
-        let dialog = gtk::Dialog::new_with_buttons(Some("Hello!"), Some(&window), gtk::DIALOG_MODAL,
+    let weak_window = window.downgrade();
+    button.connect_clicked(move |_| {
+        let window = match weak_window.upgrade() {
+            Some(window) => window,
+            None => return,
+        };
+        let dialog = gtk::Dialog::new_with_buttons(Some("Hello!"), Some(&window),
+            gtk::DialogFlags::MODAL,
             &[("No", 0), ("Yes", 1), ("Yes!", 2)]);
 
         let ret = dialog.run();
@@ -155,19 +143,29 @@ fn main() {
         dialog.destroy();
 
         entry_clone.set_text(&format!("Clicked {}", ret));
-    }));
+    });
 
     // use a plain function instead of a closure
     button_about.connect_clicked(about_clicked);
 
-    button_font.connect_clicked(clone!(window => move |_| {
+    let weak_window = window.downgrade();
+    button_font.connect_clicked(move |_| {
+        let window = match weak_window.upgrade() {
+            Some(window) => window,
+            None => return,
+        };
         let dialog = gtk::FontChooserDialog::new(Some("Font chooser test"), Some(&window));
 
         dialog.run();
         dialog.destroy();
-    }));
+    });
 
-    button_recent.connect_clicked(clone!(window => move |_| {
+    let weak_window = window.downgrade();
+    button_recent.connect_clicked(move |_| {
+        let window = match weak_window.upgrade() {
+            Some(window) => window,
+            None => return,
+        };
         let dialog = gtk::RecentChooserDialog::new(Some("Recent chooser test"), Some(&window));
         dialog.add_buttons(&[
             ("Ok", gtk::ResponseType::Ok.into()),
@@ -176,9 +174,14 @@ fn main() {
 
         dialog.run();
         dialog.destroy();
-    }));
+    });
 
-    file_button.connect_clicked(clone!(window => move |_| {
+    let weak_window = window.downgrade();
+    file_button.connect_clicked(move |_| {
+        let window = match weak_window.upgrade() {
+            Some(window) => window,
+            None => return,
+        };
         //entry.set_text("Clicked!");
         let dialog = gtk::FileChooserDialog::new(Some("Choose a file"), Some(&window),
             gtk::FileChooserAction::Open);
@@ -193,26 +196,31 @@ fn main() {
         dialog.destroy();
 
         println!("Files: {:?}", files);
-    }));
+    });
 
-    app_button.connect_clicked(clone!(window => move |_| {
+    let weak_window = window.downgrade();
+    app_button.connect_clicked(move |_| {
+        let window = match weak_window.upgrade() {
+            Some(window) => window,
+            None => return,
+        };
         //entry.set_text("Clicked!");
-        let dialog = gtk::AppChooserDialog::new_for_content_type(Some(&window), gtk::DIALOG_MODAL,
+        let dialog = gtk::AppChooserDialog::new_for_content_type(Some(&window), gtk::DialogFlags::MODAL,
             "sh");
 
         dialog.run();
         dialog.destroy();
-    }));
+    });
 
     let entry_clone = entry.clone();
     window.connect_key_press_event(move |_, key| {
-        let keyval = key.as_ref().keyval;
-        let keystate = key.as_ref().state;
+        let keyval = key.get_keyval();
+        let keystate = key.get_state();
 
         println!("key pressed: {} / {:?}", keyval, keystate);
         println!("text: {}", entry_clone.get_text().unwrap());
 
-        if keystate.intersects(modifier_type::ControlMask) {
+        if keystate.intersects(gdk::ModifierType::CONTROL_MASK) {
             println!("You pressed Ctrl!");
         }
 
